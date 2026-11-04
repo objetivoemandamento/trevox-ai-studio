@@ -1,18 +1,19 @@
 # TREVOX IA Studio
 
-Plataforma web para planejar, gerar, editar e renderizar vídeos com IA. O usuário final acessa pelo navegador; a inferência de modelos pesados roda em workers GPU separados.
+Fundação de uma plataforma web para planejar, gerar, editar e renderizar vídeos com IA. O usuário final deverá acessar pelo navegador; a inferência de modelos pesados será executada em workers GPU separados.
 
-## Estado atual
+## Estado real desta versão
 
-Esta primeira entrega é a fundação do produto: API FastAPI, interface web React/Vite, contratos de projeto/cenas, fila local de desenvolvimento, validações e testes automatizados. **Ainda não inclui inferência real dos modelos de vídeo, síntese de voz, lip-sync nem renderização MP4 integrada.** Esses motores serão conectados em etapas verificáveis.
+Implementado: interface React/Vite, API FastAPI, validação de projetos/cenas e testes automatizados.
 
-## Arquitetura
+Ainda não implementado: persistência durável, fila de jobs, workers, geração real de vídeo, síntese de voz, lip-sync, edição em timeline, renderização MP4, autenticação e deploy. A interface atual é um protótipo funcional de validação, não um editor audiovisual completo.
 
-- `apps/api`: FastAPI, validação de projetos e endpoints.
+## Estrutura existente
+
+- `apps/api`: API FastAPI e testes.
 - `apps/web`: interface React/Vite.
-- `packages/contracts`: contratos compartilhados documentados.
-- `docs`: arquitetura, roadmap e decisões.
-- `infra`: configuração de desenvolvimento.
+- `docs`: arquitetura e roadmap.
+- `.github/workflows`: CI para testes Python e build web.
 
 ## Requisitos
 
@@ -32,29 +33,33 @@ pip install -e ".[dev]"
 uvicorn trevox_api.main:app --reload
 ```
 
-Web:
+Web (em outro terminal):
 ```bash
 cd apps/web
 npm install
 npm run dev
 ```
 
-API docs: http://localhost:8000/docs
+Por padrão, a interface chama a API em `http://localhost:8000`. Para outro endereço, crie `apps/web/.env.local` com `VITE_API_URL=https://seu-dominio-da-api`.
+
+Documentação da API: http://localhost:8000/docs
 
 ## Testes
 
 ```bash
 cd apps/api
 pip install -e ".[dev]"
-pytest
+pytest -q
 ```
+
+O workflow de CI também executa o build TypeScript/Vite.
 
 ## Princípios
 
-- Sem limites artificiais fixos de cenas/projetos/duração no domínio.
-- Trabalhos longos são divididos em cenas e processados por fila.
-- Limites operacionais reais (GPU, armazenamento, tempo e custo) devem ser exibidos com transparência.
-- Retentativas apenas para falhas transitórias; falhas permanentes ficam registradas.
+- Sem teto artificial fixo de cenas/projetos/duração no domínio.
+- Quando o processamento assíncrono for implementado, trabalhos longos serão divididos por cenas.
+- Limites reais de GPU, armazenamento, tempo e custo devem ser exibidos com transparência.
+- Falhas não podem ser mascaradas como sucesso.
 - Segredos apenas em variáveis de ambiente; nunca commitar tokens.
 - Não afirmar geração/renderização concluída sem artefato realmente produzido e validado.
 
