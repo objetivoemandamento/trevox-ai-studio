@@ -18,6 +18,7 @@ export default function App() {
   const [view, setView] = useState<View>("studio");
   const [apiStatus, setApiStatus] = useState("checking");
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
+  const [omniStatus, setOmniStatus] = useState<{configured:boolean;status:string;note:string}>({configured:false,status:"checking",note:"Verificando gateway..."});
   const [projects, setProjects] = useState<Project[]>(readProjects);
   const [projectId, setProjectId] = useState("");
   const [projectName, setProjectName] = useState("Meu primeiro projeto");
@@ -30,13 +31,15 @@ export default function App() {
   async function refreshApi() {
     setApiStatus("checking");
     try {
-      const [health, caps] = await Promise.all([
+      const [health, caps, omni] = await Promise.all([
         fetch(`${API}/health`).then(r => { if (!r.ok) throw new Error("health"); return r.json(); }),
-        fetch(`${API}/capabilities`).then(r => { if (!r.ok) throw new Error("capabilities"); return r.json(); })
+        fetch(`${API}/capabilities`).then(r => { if (!r.ok) throw new Error("capabilities"); return r.json(); }),
+        fetch(`${API}/integrations/omniroute/status`).then(r => { if (!r.ok) throw new Error("omniroute"); return r.json(); })
       ]);
       setApiStatus(health.status === "ok" ? "online" : "offline");
       setCapabilities(caps);
-    } catch { setApiStatus("offline"); setCapabilities([]); }
+      setOmniStatus(omni);
+    } catch { setApiStatus("offline"); setCapabilities([]); setOmniStatus({configured:false,status:"unavailable",note:"Não foi possível consultar o gateway."}); }
   }
   useEffect(() => { void refreshApi(); }, []);
   useEffect(() => { localStorage.setItem(STORAGE, JSON.stringify(projects)); }, [projects]);
@@ -139,7 +142,7 @@ export default function App() {
       {view === "projects" && <><section className="section-heading"><div><h2>Meus projetos</h2><p>Projetos salvos localmente neste navegador.</p></div><button className="primary" onClick={newProject}><Plus size={16}/> Novo projeto</button></section>{projects.length ? <div className="project-list">{projects.map(p=><div className="project-row" key={p.id}><div><b>{p.title}</b><small>{p.scenes.length} cena(s) • Atualizado em {new Date(p.updatedAt).toLocaleString("pt-BR")}</small></div><button className="secondary" onClick={() => openProject(p)}>Abrir</button><button className="icon-button danger" onClick={() => deleteProject(p.id)} title="Excluir"><Trash2 size={15}/></button></div>)}</div> : <div className="panel empty-state">Nenhum projeto salvo. Crie um projeto no Estúdio.</div>}</>}
       {view === "library" && <><section className="section-heading"><div><h2>Biblioteca de mídia</h2><p>Área reservada para referências e arquivos de projeto.</p></div></section><div className="panel empty-state">Nenhum arquivo armazenado. Upload e armazenamento em nuvem ainda não estão conectados.</div></>}
       {view === "jobs" && <><section className="section-heading"><div><h2>Processamentos</h2><p>Status dos motores conectados à plataforma.</p></div></section><div className="capability-grid">{capabilities.map(item=><div className="capability" key={item.id}><div className="cap-icon"><Sparkles size={17}/></div><div><b>{item.name}</b><small>{item.note}</small></div><span className={item.status === "available" ? "status ready" : "status"}>{item.status === "available" ? "ON" : "OFF"}</span></div>)}</div></>}
-      {view === "settings" && <><section className="section-heading"><div><h2>Configurações</h2><p>Conexão e dados locais do TREVOX.</p></div></section><div className="panel settings-panel"><b>API</b><p>{API}</p><button className="secondary" onClick={() => void refreshApi()}><RefreshCw size={15}/> Testar conexão</button><div className="disclaimer">Projetos são armazenados no localStorage deste navegador. Limpar os dados do navegador pode removê-los. Sincronização entre dispositivos e contas ainda não está implementada.</div></div></>}
+      {view === "settings" && <><section className="section-heading"><div><h2>Configurações</h2><p>Conexão e dados locais do TREVOX.</p></div></section><div className="panel settings-panel"><b>API</b><p>{API}</p><button className="secondary" onClick={() => void refreshApi()}><RefreshCw size={15}/> Testar conexão</button><div className="capability" style={{marginTop:18}}><div className="cap-icon"><Sparkles size={17}/></div><div><b>Gateway OmniRoute</b><small>{omniStatus.note}</small></div><span className={omniStatus.configured ? "status ready" : "status"}>{omniStatus.configured ? "ON" : "OFF"}</span></div><div className="disclaimer">Projetos são armazenados no localStorage deste navegador. Limpar os dados do navegador pode removê-los. Sincronização entre dispositivos e contas ainda não está implementada.</div></div></>}
       <footer>TREVOX IA STUDIO <span>APRENDER. CRIAR. TRANSFORMAR.</span></footer>
     </main>
   </div>;
