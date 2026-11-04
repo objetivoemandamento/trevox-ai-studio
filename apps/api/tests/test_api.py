@@ -84,3 +84,29 @@ def test_empty_prompt_is_rejected():
     project["scenes"][0]["prompt"] = ""
     response = client.post("/projects/validate", json=project)
     assert response.status_code == 422
+
+
+def test_omniroute_status_reports_not_configured_without_secrets(monkeypatch):
+    monkeypatch.setattr("trevox_api.main.OMNIROUTE_URL", "")
+    monkeypatch.setattr("trevox_api.main.OMNIROUTE_API_KEY", "")
+    response = client.get("/integrations/omniroute/status")
+    assert response.status_code == 200
+    assert response.json()["configured"] is False
+    assert response.json()["status"] == "not_configured"
+
+
+def test_omniroute_proxy_fails_closed_when_not_configured(monkeypatch):
+    monkeypatch.setattr("trevox_api.main.OMNIROUTE_URL", "")
+    monkeypatch.setattr("trevox_api.main.OMNIROUTE_API_KEY", "")
+    response = client.post(
+        "/integrations/omniroute/videos/generations",
+        json={"model": "provider/model", "prompt": "test"},
+    )
+    assert response.status_code == 503
+
+
+def test_omniroute_proxy_rejects_unlisted_endpoints(monkeypatch):
+    monkeypatch.setattr("trevox_api.main.OMNIROUTE_URL", "https://gateway.example")
+    monkeypatch.setattr("trevox_api.main.OMNIROUTE_API_KEY", "test-secret")
+    response = client.post("/integrations/omniroute/admin/delete", json={})
+    assert response.status_code == 404
