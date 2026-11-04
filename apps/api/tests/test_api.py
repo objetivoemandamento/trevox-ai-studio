@@ -1,6 +1,9 @@
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
+import pytest
 
 from trevox_api.main import app
+from trevox_api.models import Scene
 
 client = TestClient(app)
 
@@ -70,11 +73,10 @@ def test_invalid_duration_is_rejected():
     assert response.status_code == 422
 
 
-def test_non_finite_duration_is_rejected():
-    project = sample_project()
-    project["scenes"][0]["duration_seconds"] = float("inf")
-    response = client.post("/projects/validate", json=project)
-    assert response.status_code == 422
+@pytest.mark.parametrize("duration", [float("inf"), float("-inf"), float("nan")])
+def test_non_finite_duration_is_rejected(duration):
+    with pytest.raises(ValidationError):
+        Scene(id="scene-1", prompt="Cena", duration_seconds=duration)
 
 
 def test_empty_prompt_is_rejected():
