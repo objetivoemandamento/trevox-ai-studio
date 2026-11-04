@@ -31,6 +31,19 @@ def test_capabilities_are_honest_about_unconnected_engines():
     assert capabilities["render"] == "not_connected"
 
 
+def test_cors_preflight_allows_local_frontend():
+    response = client.options(
+        "/projects/validate",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
 def test_project_duration_is_accumulated_without_fixed_limit():
     project = sample_project()
     project["scenes"] = [
@@ -53,6 +66,13 @@ def test_duplicate_scene_ids_are_rejected():
 def test_invalid_duration_is_rejected():
     project = sample_project()
     project["scenes"][0]["duration_seconds"] = 0
+    response = client.post("/projects/validate", json=project)
+    assert response.status_code == 422
+
+
+def test_non_finite_duration_is_rejected():
+    project = sample_project()
+    project["scenes"][0]["duration_seconds"] = float("inf")
     response = client.post("/projects/validate", json=project)
     assert response.status_code == 422
 
