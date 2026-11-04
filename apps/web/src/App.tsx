@@ -62,7 +62,7 @@ export default function App() {
     setMessage("Projeto removido deste navegador.");
   }
   function exportProject() {
-    if (!projectName.trim() || scenes.length === 0) { setMessage("Informe um nome e adicione pelo menos uma cena antes de exportar."); return; }
+    if (!projectName.trim() || projectName.trim().length > 200 || scenes.length === 0 || scenes.some(scene => !scene.id.trim() || scene.id.length > 100 || !scene.prompt.trim() || !Number.isFinite(Number(scene.duration_seconds)) || Number(scene.duration_seconds) <= 0)) { setMessage("Revise o nome e todas as cenas. Cada cena precisa de descrição e duração maior que zero."); return; }
     const payload: Project = { id: projectId || crypto.randomUUID(), title: projectName.trim(), scenes, updatedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -70,7 +70,7 @@ export default function App() {
     link.href = url;
     link.download = `${payload.title.replace(/[^a-z0-9-_]+/gi, "-").replace(/^-|-$/g, "") || "projeto"}.trevox.json`;
     link.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     setMessage("Projeto exportado em JSON.");
   }
   async function importProject(file?: File) {
@@ -79,9 +79,10 @@ export default function App() {
       const data: unknown = JSON.parse(await file.text());
       if (!data || typeof data !== "object") throw new Error("Arquivo inválido.");
       const item = data as Partial<Project>;
-      if (typeof item.title !== "string" || !item.title.trim() || !Array.isArray(item.scenes) || item.scenes.length === 0) throw new Error("O JSON precisa conter título e ao menos uma cena.");
+      if (typeof item.title !== "string" || !item.title.trim() || item.title.trim().length > 200 || !Array.isArray(item.scenes) || item.scenes.length === 0) throw new Error("O JSON precisa conter título de até 200 caracteres e ao menos uma cena.");
+      if (item.id !== undefined && (typeof item.id !== "string" || !item.id.trim() || item.id.length > 100)) throw new Error("O identificador do projeto é inválido.");
       const importedScenes = item.scenes.map((scene, index) => {
-        if (!scene || typeof scene.id !== "string" || typeof scene.prompt !== "string" || typeof scene.duration_seconds !== "number" || !Number.isFinite(scene.duration_seconds) || scene.duration_seconds <= 0 || !scene.prompt.trim()) throw new Error(`A cena ${index + 1} tem dados inválidos.`);
+        if (!scene || typeof scene.id !== "string" || !scene.id.trim() || scene.id.length > 100 || typeof scene.prompt !== "string" || !scene.prompt.trim() || typeof scene.duration_seconds !== "number" || !Number.isFinite(scene.duration_seconds) || scene.duration_seconds <= 0) throw new Error(`A cena ${index + 1} tem dados inválidos.`);
         return { id: scene.id, prompt: scene.prompt, duration_seconds: scene.duration_seconds };
       });
       if (new Set(importedScenes.map(scene => scene.id)).size !== importedScenes.length) throw new Error("O arquivo contém IDs de cena repetidos.");
