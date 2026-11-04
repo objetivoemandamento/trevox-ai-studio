@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Clapperboard, Film, FolderOpen, Gauge, Plus, Settings2, Sparkles, Trash2, WandSparkles, Save, RefreshCw } from "lucide-react";
 
 type Capability = { id: string; name: string; status: string; note: string };
@@ -24,6 +24,7 @@ export default function App() {
   const [scenes, setScenes] = useState<Scene[]>([{ id: crypto.randomUUID(), prompt: "Apresentação cinematográfica do tema, com iluminação dramática.", duration_seconds: 30 }]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const importInput = useRef<HTMLInputElement>(null);
   const totalDuration = useMemo(() => scenes.reduce((sum, scene) => sum + Number(scene.duration_seconds || 0), 0), [scenes]);
 
   async function refreshApi() {
@@ -60,6 +61,40 @@ export default function App() {
     if (projectId === id) newProject();
     setMessage("Projeto removido deste navegador.");
   }
+  function exportProject() {
+    if (!projectName.trim() || scenes.length === 0) { setMessage("Informe um nome e adicione pelo menos uma cena antes de exportar."); return; }
+    const payload: Project = { id: projectId || crypto.randomUUID(), title: projectName.trim(), scenes, updatedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${payload.title.replace(/[^a-z0-9-_]+/gi, "-").replace(/^-|-$/g, "") || "projeto"}.trevox.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setMessage("Projeto exportado em JSON.");
+  }
+  async function importProject(file?: File) {
+    if (!file) return;
+    try {
+      const data: unknown = JSON.parse(await file.text());
+      if (!data || typeof data !== "object") throw new Error("Arquivo inválido.");
+      const item = data as Partial<Project>;
+      if (typeof item.title !== "string" || !item.title.trim() || !Array.isArray(item.scenes) || item.scenes.length === 0) throw new Error("O JSON precisa conter título e ao menos uma cena.");
+      const importedScenes = item.scenes.map((scene, index) => {
+        if (!scene || typeof scene.id !== "string" || typeof scene.prompt !== "string" || typeof scene.duration_seconds !== "number" || !Number.isFinite(scene.duration_seconds) || scene.duration_seconds <= 0 || !scene.prompt.trim()) throw new Error(`A cena ${index + 1} tem dados inválidos.`);
+        return { id: scene.id, prompt: scene.prompt, duration_seconds: scene.duration_seconds };
+      });
+      if (new Set(importedScenes.map(scene => scene.id)).size !== importedScenes.length) throw new Error("O arquivo contém IDs de cena repetidos.");
+      const imported: Project = { id: typeof item.id === "string" && item.id ? item.id : crypto.randomUUID(), title: item.title.trim(), scenes: importedScenes, updatedAt: new Date().toISOString() };
+      setProjectId(imported.id); setProjectName(imported.title); setScenes(imported.scenes);
+      setProjects(current => [imported, ...current.filter(project => project.id !== imported.id)]);
+      setMessage("Projeto importado e salvo neste navegador.");
+      setView("studio");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível importar este arquivo.");
+    }
+    if (importInput.current) importInput.current.value = "";
+  }
   async function validateDraft() {
     if (!projectName.trim() || scenes.length === 0) { setMessage("Informe um nome e adicione pelo menos uma cena."); return; }
     setBusy(true); setMessage("Validando projeto na API...");
@@ -94,7 +129,7 @@ export default function App() {
             <label>Descrição da cena</label><textarea value={scene.prompt} rows={3} onChange={e => setScenes(current => current.map(s => s.id === scene.id ? {...s,prompt:e.target.value} : s))}/>
             <label>Duração (segundos)</label><input type="number" min="1" step="1" value={scene.duration_seconds} onChange={e => setScenes(current => current.map(s => s.id === scene.id ? {...s,duration_seconds:Number(e.target.value)} : s))}/>
           </div>)}
-          <div className="actions"><button className="secondary" onClick={() => setScenes(current => [...current,makeScene()])}><Plus size={15}/> Adicionar cena</button><button className="secondary" onClick={saveProject}><Save size={15}/> Salvar</button></div>
+          <div className="actions"><button className="secondary" onClick={() => setScenes(current => [...current,makeScene()])}><Plus size={15}/> Adicionar cena</button><button className="secondary" onClick={saveProject}><Save size={15}/> Salvar</button><button className="secondary" onClick={exportProject}>Exportar JSON</button><button className="secondary" onClick={() => importInput.current?.click()}>Importar JSON</button><input ref={importInput} type="file" accept=".json,application/json" hidden onChange={e => void importProject(e.target.files?.[0])}/></div>
           <button className="primary" disabled={busy || apiStatus !== "online"} onClick={() => void validateDraft()}>{busy ? "Validando..." : "Validar projeto"}</button>
           {message && <div className="message" role="status">{message}</div>}
           <div className="disclaimer">A validação confere os dados. Geração de vídeo, voz, lip-sync e exportação MP4 ainda exigem motores de mídia conectados.</div>
