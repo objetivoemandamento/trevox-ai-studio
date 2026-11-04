@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 class Scene(BaseModel):
     id: str = Field(min_length=1, max_length=100)
     prompt: str = Field(min_length=1)
-    duration_seconds: float = Field(gt=0)
+    duration_seconds: float = Field(gt=0, allow_inf_nan=False)
     character_ids: list[str] = Field(default_factory=list)
     reference_asset_ids: list[str] = Field(default_factory=list)
 
