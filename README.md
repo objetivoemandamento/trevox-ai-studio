@@ -85,3 +85,25 @@ O repositório está preparado para deploy do frontend React/Vite na Vercel por 
 **Importante:** a Vercel hospedará a interface web. A API FastAPI precisa ser publicada separadamente em um serviço compatível com Python (por exemplo Render ou Railway), com `CORS_ORIGINS` configurada para a URL pública da Vercel. Sem a API publicada e a variável `VITE_API_URL` configurada, a página pode abrir, mas a validação de projetos mostrará a API como desconectada.
 
 O arquivo de configuração não cria automaticamente um projeto nem um domínio na conta Vercel.
+
+
+## Integração opcional com OmniRoute
+
+O backend oferece um adaptador server-side para o [OmniRoute](https://github.com/diegosouzapw/OmniRoute), que unifica provedores e oferece fallback entre modelos configurados. O gateway é um serviço separado e precisa estar implantado e configurado antes de ser usado.
+
+Configure **somente no ambiente do backend** (nunca no Vite/frontend):
+
+- `OMNIROUTE_URL`: URL base privada/pública do seu serviço OmniRoute, sem barra final.
+- `OMNIROUTE_API_KEY`: chave de acesso gerada no OmniRoute.
+
+Endpoints TREVOX:
+- `GET /integrations/omniroute/status`: informa se URL e chave foram configuradas.
+- `POST /integrations/omniroute/chat/completions`
+- `POST /integrations/omniroute/images/generations`
+- `POST /integrations/omniroute/videos/generations`
+- `POST /integrations/omniroute/audio/speech`
+- `POST /integrations/omniroute/music/generations`
+
+O proxy permite somente uma lista explícita de endpoints, mantém a chave no servidor e não considera a simples configuração como prova de que um provedor específico esteja disponível. O catálogo de modelos e as credenciais dos provedores devem ser configurados no painel OmniRoute. O endpoint de vídeo só funcionará quando houver um provedor/modelo de vídeo compatível conectado no OmniRoute.
+
+**Limitação de implantação:** não hospede OmniRoute em serviço gratuito com sistema de arquivos efêmero sem persistência. O OmniRoute guarda banco SQLite e credenciais localmente; reinicializações sem volume persistente podem apagar configurações. Para uso contínuo, precisa de armazenamento persistente e recursos compatíveis com o runtime Node.js exigido pelo projeto.
