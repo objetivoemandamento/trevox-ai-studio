@@ -71,3 +71,17 @@ O workflow de CI também executa o build TypeScript/Vite.
 4. Continuidade de personagens, voz e lip-sync.
 5. Timeline, legendas, trilha e renderização FFmpeg.
 6. Autenticação, quotas transparentes, observabilidade e implantação.
+
+
+## Deploy do frontend na Vercel
+
+O repositório está preparado para deploy do frontend React/Vite na Vercel por meio do arquivo `vercel.json`.
+
+1. Na Vercel, escolha **Add New → Project** e importe `objetivoemandamento/trevox-ai-studio`.
+2. Mantenha a raiz do projeto como a raiz do repositório. O `vercel.json` já define instalação, build e saída em `apps/web/dist`.
+3. Configure a variável de ambiente `VITE_API_URL` com a URL pública da API FastAPI (sem barra final), por exemplo `https://api.seudominio.com`.
+4. Clique em Deploy.
+
+**Importante:** a Vercel hospedará a interface web. A API FastAPI precisa ser publicada separadamente em um serviço compatível com Python (por exemplo Render ou Railway), com `CORS_ORIGINS` configurada para a URL pública da Vercel. Sem a API publicada e a variável `VITE_API_URL` configurada, a página pode abrir, mas a validação de projetos mostrará a API como desconectada.
+
+O arquivo de configuração não cria automaticamente um projeto nem um domínio na conta Vercel.
