@@ -3,7 +3,7 @@ import { Clapperboard, Film, FolderOpen, Gauge, Plus, Settings2, Sparkles, Uploa
 
 type Capability = { id: string; name: string; status: string; note: string };
 
-const API = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API = (import.meta.env.VITE_API_URL || "https://trevox-ai-studio-api.onrender.com").replace(/\/$/, "");
 
 export default function App() {
   const [apiStatus, setApiStatus] = useState("checking");
